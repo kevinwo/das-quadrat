@@ -13,7 +13,7 @@ private enum AuthorizationViewControllerRequestStatus {
     case None               // View controller has been initialized.
     case Loading            // Web view loading page.
     case Loaded             // Page has been loaded successfully.
-    case Failed(NSError)    // Web view failed to load page with error.
+    case Failed(Error)      // Web view failed to load page with error.
 }
 
 /** 
@@ -25,8 +25,8 @@ public class AuthorizationNavigationController: UINavigationController {
 }
 
 public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
-    private let authorizationURL: NSURL
-    private let redirectURL: NSURL
+    private let authorizationURL: URL
+    private let redirectURL: URL
     
     /**
         Whether view controller should controll network activity indicator or not.
@@ -52,11 +52,11 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
     
     // MARK: -
     
-    init(authorizationURL: NSURL, redirectURL: NSURL, delegate: AuthorizationDelegate) {
+    init(authorizationURL: URL, redirectURL: URL, delegate: AuthorizationDelegate) {
         self.authorizationURL = authorizationURL
         self.redirectURL = redirectURL
         self.authorizationDelegate = delegate
-        let bundle = NSBundle(forClass: AuthorizationViewController.self)
+        let bundle = Bundle(for: AuthorizationViewController.self)
         super.init(nibName: "AuthorizationViewController", bundle: bundle)
     }
     
@@ -68,7 +68,7 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
         super.viewDidLoad()
         self.webView.scrollView.showsVerticalScrollIndicator = false
         
-        let cancelButton = UIBarButtonItem(barButtonSystemItem: .Cancel,
+        let cancelButton = UIBarButtonItem(barButtonSystemItem: .cancel,
             target: self, action: #selector(AuthorizationViewController.cancelButtonTapped))
         self.navigationItem.leftBarButtonItem = cancelButton
         if shouldControllNetworkActivityIndicator {
@@ -81,7 +81,7 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
     
     @objc func loadAuthorizationPage() {
         self.status = .Loading
-        let request = NSURLRequest(URL: self.authorizationURL)
+        let request = URLRequest(url: self.authorizationURL)
         self.webView.loadRequest(request)
     }
     
@@ -91,29 +91,26 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
     
     // MARK: - Web view delegate methods
     
-    public func webView(webView: UIWebView, shouldStartLoadWithRequest
-        request: NSURLRequest, navigationType: UIWebViewNavigationType) -> Bool {
-            if let URLString = request.URL?.absoluteString {
+    public func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
+            if let URLString = request.url?.absoluteString {
                 if URLString.hasPrefix(self.redirectURL.absoluteString) {
                     // If we've reached redirect URL we should let know delegate.
-                    self.authorizationDelegate?.didReachRedirectURL(request.URL!)
+                    self.authorizationDelegate?.didReachRedirectURL(request.url!)
                     return false
                 }
             }
             return true
     }
     
-    public func webView(webView: UIWebView, didFailLoadWithError error: NSError?) {
-        if let error = error {
-            if error.domain == "WebKitErrorDomain" && error.code == 102 {
-                // URL loading was interrupted. It happens when one taps "download Foursquare to sign up!".
-                return
-            }
-            self.status = .Failed(error)
+    public func webView(_ webView: UIWebView, didFailLoadWithError error: Error) {
+        if error._domain == "WebKitErrorDomain" && error._code == 102 {
+            // URL loading was interrupted. It happens when one taps "download Foursquare to sign up!".
+            return
         }
+        self.status = .Failed(error)
     }
     
-    public func webViewDidFinishLoad(webView: UIWebView) {
+    public func webViewDidFinishLoad(_ webView: UIWebView) {
         self.status = .Loaded
     }
     
@@ -130,12 +127,12 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
             self.indicator.startAnimating()
             self.indicator.alpha = 1.0
             self.webView.alpha = 0.0
-            self.statusLabel.hidden = true
+            self.statusLabel.isHidden = true
             
         case .Loaded:
             // Show web view, hide activity indicator and status label.
             self.networkActivityIndicator?.endNetworkActivity(activityIdentifier)
-            self.statusLabel.hidden = true
+            self.statusLabel.isHidden = true
             if self.webView.alpha == 0.0 {
                 self.showWebViewWithAnimation()
             }
@@ -145,7 +142,7 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
             self.networkActivityIndicator?.endNetworkActivity(activityIdentifier)
             self.indicator.stopAnimating()
             self.webView.alpha = 0.0
-            self.statusLabel.hidden = false
+            self.statusLabel.isHidden = false
             self.statusLabel.text = error.localizedDescription
             
         case .None:
@@ -153,12 +150,12 @@ public class AuthorizationViewController: UIViewController, UIWebViewDelegate {
             self.networkActivityIndicator?.endNetworkActivity(activityIdentifier)
             self.indicator.stopAnimating()
             self.webView.alpha = 0.0
-            self.statusLabel.hidden = true
+            self.statusLabel.isHidden = true
         }
     }
     
     private func showWebViewWithAnimation() {
-        UIView.animateWithDuration(0.2, animations: {
+        UIView.animate(withDuration: 0.2, animations: {
             self.indicator.alpha = 0.0
             self.webView.alpha = 1.0
             }, completion: { (finished) -> Void in

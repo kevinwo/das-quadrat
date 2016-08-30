@@ -23,8 +23,8 @@ class NativeTouchAuthorizer: Authorizer {
             Parameter.v            : "20130509"
         ]
         
-        let authorizationURL = Parameter.buildURL(NSURL(string: baseURL)!, parameters: parameters)
-        let redirectURL = NSURL(string: configuration.client.redirectURL)
+        let authorizationURL = Parameter.buildURL(URL(string: baseURL)!, parameters: parameters)
+        let redirectURL = URL(string: configuration.client.redirectURL)
         if redirectURL == nil {
             fatalError("Check your redirectURL")
         }
@@ -36,25 +36,25 @@ class NativeTouchAuthorizer: Authorizer {
         }
     }
     
-    func authorize(completionHandler: (String?, NSError?) -> Void) {
+    func authorize(completionHandler: ((String?, Error?) -> Void)?) {
         self.completionHandler = completionHandler
-        UIApplication.sharedApplication().openURL(self.authorizationURL)
+        UIApplication.shared.openURL(self.authorizationURL)
     }
     
-    func handleURL(URL: NSURL) -> Bool {
-        if URL.scheme == self.redirectURL.scheme {
-            self.didReachRedirectURL(URL)
+    func handleURL(url: URL) -> Bool {
+        if url.scheme == self.redirectURL.scheme {
+            self.didReachRedirectURL(url)
             return true
         }
         return false
     }
-    
-    override func didReachRedirectURL(redirectURL: NSURL) {
+
+    override func didReachRedirectURL(_ redirectURL: URL) {
         let parameters = self.extractParametersFromURL(redirectURL)
         let accessCode = parameters["code"]
         if let accessCode = accessCode {
             // We should exchange access code to access token.
-            self.requestAccessTokenWithCode(accessCode)
+            self.requestAccessTokenWithCode(code: accessCode)
         } else {
             // No access code, so we have error there. This method will take care about it.
             super.didReachRedirectURL(redirectURL)
@@ -72,37 +72,37 @@ class NativeTouchAuthorizer: Authorizer {
             Parameter.code          : code,
             Parameter.grant_type    : "authorization_code"
         ]
-        let URL = Parameter.buildURL(NSURL(string: accessTokenURL)!, parameters: parameters)
-        let request = NSURLRequest(URL: URL)
+        let url = Parameter.buildURL(URL(string: accessTokenURL)!, parameters: parameters)
+        let request = URLRequest(url: url)
         let identifier = self.networkActivityController?.beginNetworkActivity()
-        let task = NSURLSession.sharedSession().dataTaskWithRequest(request) {
+        let task = URLSession.shared.dataTask(with: request) {
             (data, response, error) -> Void in
             self.networkActivityController?.endNetworkActivity(identifier)
-            self.processData(data, response: response, error: error)
+            self.process(data: data, response: response, error: error)
         }
         task.resume()
     }
     
-    private func processData(data: NSData?, response: NSURLResponse?, error: NSError?) {
-        if let data = data, let response = response where response.MIMEType == "application/json" {
-            var parseError: NSError?
-            var jsonObject: AnyObject? = nil
+    private func process(data: Data?, response: URLResponse?, error: Error?) {
+        if let data = data, let response = response, response.mimeType == "application/json" {
+            var parseError: Error?
+            var jsonObject: Any? = nil
             do {
-                jsonObject = try NSJSONSerialization.JSONObjectWithData(data,
-                    options: NSJSONReadingOptions(rawValue: 0))
+                jsonObject = try JSONSerialization.jsonObject(with: data,
+                    options: JSONSerialization.ReadingOptions(rawValue: 0))
             } catch let error as NSError {
                 parseError = error
             }
-            NSOperationQueue.mainQueue().addOperationWithBlock {
+            OperationQueue.main.addOperation {
                 if let parameters = jsonObject as? Parameters {
-                    self.finilizeAuthorizationWithParameters(parameters)
+                    self.finalizeAuthorizationWithParameters(parameters)
                 } else {
-                    self.finilizeAuthorization(nil, error: parseError)
+                    self.finalizeAuthorization(nil, error: parseError)
                 }
             }
         } else {
-            NSOperationQueue.mainQueue().addOperationWithBlock {
-                self.finilizeAuthorization(nil, error: error)
+            OperationQueue.main.addOperation {
+                self.finalizeAuthorization(nil, error: error)
             }
         }
     }

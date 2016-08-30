@@ -13,25 +13,25 @@ import UIKit
 @objc public protocol SessionAuthorizationDelegate: class {
     
     /** It can be useful if one needs 1password integration. */
-    optional func sessionWillPresentAuthorizationViewController(controller: AuthorizationViewController)
+    @objc optional func sessionWillPresentAuthorizationViewController(controller: AuthorizationViewController)
     
-    optional func sessionWillDismissAuthorizationViewController(controller: AuthorizationViewController)
+    @objc optional func sessionWillDismissAuthorizationViewController(controller: AuthorizationViewController)
 }
 
 extension Session {
     
     public func canUseNativeOAuth() -> Bool {
         let baseURL = self.configuration.server.nativeOauthBaseURL
-        let URL = NSURL(string: baseURL) as NSURL!
-        return UIApplication.sharedApplication().canOpenURL(URL)
+        let url = URL(string: baseURL)!
+        return UIApplication.shared.canOpenURL(url)
     }
     
-    public func handleURL(URL: NSURL) -> Bool {
+    public func handleURL(url: URL) -> Bool {
         if let nativeAuthorizer = self.authorizer as? NativeTouchAuthorizer {
-           return nativeAuthorizer.handleURL(URL) as Bool!
+           return nativeAuthorizer.handleURL(url: url) as Bool!
         }
         let nativeAuthorizer = NativeTouchAuthorizer(configuration: self.configuration)
-        return nativeAuthorizer.handleURL(URL) as Bool!
+        return nativeAuthorizer.handleURL(url: url) as Bool!
     }
     
     public func authorizeWithViewController(viewController: UIViewController,
@@ -39,18 +39,18 @@ extension Session {
             
         if self.authorizer == nil {
             let block = {
-                (accessToken: String?, error: NSError?) -> Void in
+                (accessToken: String?, error: Error?) -> Void in
                 self.authorizer = nil
                 completionHandler(accessToken != nil, error)
             }
             
             if self.canUseNativeOAuth() {
                 let nativeAuthorizer = NativeTouchAuthorizer(configuration: self.configuration)
-                nativeAuthorizer.authorize(block)
+                nativeAuthorizer.authorize(completionHandler: block)
                 self.authorizer = nativeAuthorizer
             } else {
                 let touchAuthorizer = TouchAuthorizer(configuration: self.configuration)
-                touchAuthorizer.authorize(viewController, delegate: delegate, completionHandler: block)
+                touchAuthorizer.authorize(viewController: viewController, delegate: delegate, completionHandler: block)
                 self.authorizer = touchAuthorizer
             }
         }
