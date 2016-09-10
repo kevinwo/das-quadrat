@@ -35,7 +35,7 @@ extension Session {
     }
     
     public func authorizeWithViewController(viewController: UIViewController,
-        delegate: SessionAuthorizationDelegate?, completionHandler: AuthorizationHandler) {
+        delegate: SessionAuthorizationDelegate?, completionHandler: @escaping AuthorizationHandler) {
             
         if self.authorizer == nil {
             let block = {

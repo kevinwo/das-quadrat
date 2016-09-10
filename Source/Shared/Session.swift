@@ -185,7 +185,7 @@ open class Session {
     }
     
     /** Downloads image at URL and puts in cache. */
-    open func downloadImageAtURL(_ URL: Foundation.URL, completionHandler: DownloadImageClosure) {
+    open func downloadImageAtURL(_ URL: Foundation.URL, completionHandler: @escaping DownloadImageClosure) {
         let request = URLRequest(url: URL)
         let identifier = networkActivityController?.beginNetworkActivity()
         let task = self.URLSession.downloadTask(with: request) {

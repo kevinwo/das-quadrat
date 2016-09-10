@@ -21,7 +21,7 @@ open class Multi: Endpoint {
         Returns task to make request to `multi` endpoint.
         Use `subresponses` property of response object.
     */
-    open func get(_ tasks: [Task], completionHandler: ResponseClosure) -> Task {
+    open func get(_ tasks: [Task], completionHandler: @escaping ResponseClosure) -> Task {
         let firstTask = tasks.first as Task!
         var queries = [String]()
         for task in tasks {
